@@ -41,6 +41,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
 
     header nav a {
@@ -48,6 +50,30 @@
       margin-left: 1.5rem;
       text-decoration: none;
       font-weight: 500;
+    }
+
+    /* ✅ Login/Logout buttons */
+    #auth-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    #auth-actions button {
+      background: var(--white);
+      color: var(--primary);
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #auth-status {
+      color: #DCEBFF;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-left: 0.25rem;
     }
 
     .hero {
@@ -132,11 +158,19 @@
 <header>
   <nav aria-label="Primary navigation">
     <strong>ABC Bank</strong>
+
     <div>
-      #Personal</a>
-      #Business</a>
-      #Savings</a>
-      #Support</a>
+      <a href="#">Personal</a>
+      <a href="#">Business</a>
+      <a href="#">Savings</a>
+      <a href="#">Support</a>
+    </div>
+
+    <!-- ✅ Login/Logout actions -->
+    <div id="auth-actions">
+      <button id="loginBtn" type="button">Login</button>
+      <button id="logoutBtn" type="button" style="display:none;">Logout</button>
+      <span id="auth-status" aria-live="polite"></span>
     </div>
   </nav>
 </header>
@@ -146,7 +180,7 @@
   <section class="hero" aria-labelledby="hero-title">
     <h1 id="hero-title">Banking built for modern Britain</h1>
     <p>Secure accounts, smarter savings, and personalised financial support — all in one place.</p>
-    #Open an account</a>
+    <a class="cta-button" href="#">Open an account</a>
   </section>
 
   <section class="section" aria-labelledby="products-title">
@@ -155,19 +189,19 @@
       <div class="card">
         <h3>Everyday Current Account</h3>
         <p>Manage your money with instant notifications, fee‑free UK payments, and full transparency.</p>
-        #Learn more</a>
+        <a href="#">Learn more</a>
       </div>
 
       <div class="card">
-        <h3>Savings & ISAs</h3>
+        <h3>Savings &amp; ISAs</h3>
         <p>Competitive interest rates with easy access — designed for long‑term financial wellbeing.</p>
-        #View rates</a>
+        <a href="#">View rates</a>
       </div>
 
       <div class="card">
         <h3>Personal Loans</h3>
         <p>Clear terms, no hidden fees, and quick decisions tailored to your needs.</p>
-        #Check eligibility</a>
+        <a href="#">Check eligibility</a>
       </div>
     </div>
   </section>
@@ -179,35 +213,128 @@
     © 2026 ABC Bank plc. (v2) Authorised by the Prudential Regulation Authority and regulated by the Financial Conduct Authority.
   </p>
   <p>
-    #Privacy Notice</a> · #Cookies</a> · #Accessibility</a>
+    <a href="#">Privacy Notice</a> · <a href="#">Cookies</a> · <a href="#">Accessibility</a>
   </p>
 </footer>
 
 <!-- ✅ Agentforce embedded chat placeholder -->
 <div id="agentforce-chat" aria-label="Customer support chat">
-  <!-- Salesforce Embedded Service / Agentforce script goes here -->
+  <!-- Salesforce Embedded Service / Agentforce script loads here after login -->
 </div>
 
-<script type='text/javascript'>
-	function initEmbeddedMessaging() {
-		try {
-			embeddedservice_bootstrap.settings.language = 'en_US'; // For example, enter 'en' or 'en-US'
+<script type="text/javascript">
+  /******************************************************************
+   * ✅ GitHub Pages (static) login state — demo/POC only
+   ******************************************************************/
+  const SESSION_KEY = "abc_bank_logged_in";
 
-			embeddedservice_bootstrap.init(
-				'00DgL00000Esmu1',
-				'AXIS_Messaging_setting',
-				'https://orgfarm-a2838a83c4-dev-ed.develop.my.site.com/ESWAXISMessagingsetting1775219897692',
-				{
-					scrt2URL: 'https://orgfarm-a2838a83c4-dev-ed.develop.my.salesforce-scrt.com'
-				}
-			);
-		} catch (err) {
-			console.error('Error loading Embedded Messaging: ', err);
-		}
-	};
+  function isLoggedIn() {
+    return sessionStorage.getItem(SESSION_KEY) === "true";
+  }
+
+  function setLoggedIn(val) {
+    sessionStorage.setItem(SESSION_KEY, val ? "true" : "false");
+  }
+
+  function updateAuthUI() {
+    const loggedIn = isLoggedIn();
+    document.getElementById("loginBtn").style.display = loggedIn ? "none" : "inline-block";
+    document.getElementById("logoutBtn").style.display = loggedIn ? "inline-block" : "none";
+    document.getElementById("auth-status").textContent = loggedIn ? "Logged in" : "Guest";
+  }
+
+  /******************************************************************
+   * ✅ Agentforce / Embedded Messaging — load only after login
+   ******************************************************************/
+  const BOOTSTRAP_SRC =
+    "https://orgfarm-a2838a83c4-dev-ed.develop.my.site.com/ESWAXISMessagingsetting1775219897692/assets/js/bootstrap.min.js";
+
+  let agentforceLoaded = false;
+
+  function loadAgentforceAfterLogin() {
+    if (agentforceLoaded) return;
+    agentforceLoaded = true;
+
+    // Inject bootstrap script dynamically (loads only after login)
+    const s = document.createElement("script");
+    s.type = "text/javascript";
+    s.src = BOOTSTRAP_SRC;
+
+    s.onload = function () {
+      initEmbeddedMessaging();
+    };
+
+    s.onerror = function () {
+      console.error("Failed to load Agentforce bootstrap script.");
+    };
+
+    document.body.appendChild(s);
+  }
+
+  function initEmbeddedMessaging() {
+    try {
+      embeddedservice_bootstrap.settings.language = "en_US"; // For example, enter 'en' or 'en-US'
+
+      // ✅ Optional: Pass hidden pre-chat fields AFTER SDK is ready
+      // Salesforce recommends adding a listener for 'onEmbeddedMessagingReady'
+      // before invoking pre-chat API calls. [1](https://developer.salesforce.com/docs/service/messaging-web/guide/pre-chat.html)
+      window.addEventListener("onEmbeddedMessagingReady", () => {
+        try {
+          // If you later enable hidden pre-chat mappings, set them here.
+          // Example only (safe demo values):
+          if (embeddedservice_bootstrap?.prechatAPI?.setHiddenPrechatFields) {
+            embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({
+              LoginStatus: "LOGGED_IN",
+              Portal: "GitHubPagesPOC"
+            });
+          }
+        } catch (e) {
+          console.warn("Hidden pre-chat fields set failed:", e);
+        }
+      });
+
+      embeddedservice_bootstrap.init(
+        "00DgL00000Esmu1",
+        "AXIS_Messaging_setting",
+        "https://orgfarm-a2838a83c4-dev-ed.develop.my.site.com/ESWAXISMessagingsetting1775219897692",
+        {
+          scrt2URL: "https://orgfarm-a2838a83c4-dev-ed.develop.my.salesforce-scrt.com"
+        }
+      );
+    } catch (err) {
+      console.error("Error loading Embedded Messaging: ", err);
+    }
+  }
+
+  /******************************************************************
+   * ✅ Login / Logout handlers
+   ******************************************************************/
+  document.getElementById("loginBtn").addEventListener("click", () => {
+    // Demo login — mark user as logged in
+    setLoggedIn(true);
+    updateAuthUI();
+
+    // Load Agentforce now that the user is logged in
+    loadAgentforceAfterLogin();
+  });
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    setLoggedIn(false);
+
+    // Cleanest way to remove all SDK state on a static page
+    // is a full reload after clearing session. (POC approach)
+    sessionStorage.removeItem(SESSION_KEY);
+    location.reload();
+  });
+
+  // Initialise UI state on page load
+  updateAuthUI();
+
+  // Auto-load Agentforce only if user is already logged in
+  if (isLoggedIn()) {
+    loadAgentforceAfterLogin();
+  }
 </script>
-<script type='text/javascript' src='https://orgfarm-a2838a83c4-dev-ed.develop.my.site.com/ESWAXISMessagingsetting1775219897692/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
-
 
 </body>
 </html>
